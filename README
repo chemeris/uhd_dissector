@@ -4,3 +4,15 @@ uhd_dissector
 UHD control packets dissector for Wireshark. Compile and install to be able decode UHD control streams between a host and a network UHD device.
 
 Note: Only UHD control over the network is supported so far.
+
+Building and installing
+=======================
+
+mkdir build
+cd build
+cmake ..
+... solve any issues with dependencies ...
+make
+make install
+
+This should install in your home directory. Wireshark should pick up the plugin on startup and show 'UHD' protocol in the protocol list.

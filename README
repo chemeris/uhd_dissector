@@ -1,0 +1,6 @@
+uhd_dissector
+=============
+
+UHD control packets dissector for Wireshark. Compile and install to be able decode UHD control streams between a host and a network UHD device.
+
+Note: Only UHD control over the network is supported so far.

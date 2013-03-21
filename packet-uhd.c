@@ -3,6 +3,8 @@
  *
  * (C) 2013 by Klyuchnikov Ivan <kluchnikovi@gmail.com>
  *
+ * $Id: packet-uhd.c 47974 2013-03-21 13:24:24Z eapache $
+ *
  * Wireshark - Network traffic analyzer
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
@@ -24,6 +26,12 @@
  *
  */
 
+/*
+ * Original dissector can be found here
+ * https://github.com/chemeris/uhd_dissector
+*/
+
+
 #include "config.h"
 
 #include <glib.h>
@@ -32,23 +40,22 @@
 
 /* ====== DO NOT MAKE UNAPPROVED MODIFICATIONS HERE ===== */
 
-#define    USRP2_CTRL_ID_HUH_WHAT    0x20  //' '
-#define    UMTRX_CTRL_ID_REQUEST     0x75  //'u'
-#define    UMTRX_CTRL_ID_RESPONSE    0x55  //'U'
-#define    USRP2_CTRL_ID_WAZZUP_BRO  0x61  //'a'
-#define    USRP2_CTRL_ID_WAZZUP_DUDE 0x41  //'A'
-#define    USRP2_CTRL_ID_TRANSACT_ME_SOME_SPI_BRO     0x73 //'s'
-#define    USRP2_CTRL_ID_OMG_TRANSACTED_SPI_DUDE      0x53 //'S'
-#define    USRP2_CTRL_ID_DO_AN_I2C_READ_FOR_ME_BRO    0x69 //'i'
-#define    USRP2_CTRL_ID_HERES_THE_I2C_DATA_DUDE      0x49 //'I'
-#define    USRP2_CTRL_ID_WRITE_THESE_I2C_VALUES_BRO   0x68 //'h'
-#define    USRP2_CTRL_ID_COOL_IM_DONE_I2C_WRITE_DUDE  0x48 //'H'
-#define    USRP2_CTRL_ID_GET_THIS_REGISTER_FOR_ME_BRO 0x72 //'r'
-#define    USRP2_CTRL_ID_OMG_GOT_REGISTER_SO_BAD_DUDE 0x52 //'R'
-#define    USRP2_CTRL_ID_HOLLER_AT_ME_BRO 0x6c //'l'
-#define    USRP2_CTRL_ID_HOLLER_BACK_DUDE 0x4c //'L'
-#define    USRP2_CTRL_ID_PEACE_OUT        0x7e //'~'
-
+#define    USRP2_CTRL_ID_HUH_WHAT    0x20  /* ' ' */
+#define    UMTRX_CTRL_ID_REQUEST     0x75  /* 'u' */
+#define    UMTRX_CTRL_ID_RESPONSE    0x55  /* 'U' */
+#define    USRP2_CTRL_ID_WAZZUP_BRO  0x61  /* 'a' */
+#define    USRP2_CTRL_ID_WAZZUP_DUDE 0x41  /* 'A' */
+#define    USRP2_CTRL_ID_TRANSACT_ME_SOME_SPI_BRO     0x73 /* 's' */
+#define    USRP2_CTRL_ID_OMG_TRANSACTED_SPI_DUDE      0x53 /* 'S' */
+#define    USRP2_CTRL_ID_DO_AN_I2C_READ_FOR_ME_BRO    0x69 /* 'i' */
+#define    USRP2_CTRL_ID_HERES_THE_I2C_DATA_DUDE      0x49 /* 'I' */
+#define    USRP2_CTRL_ID_WRITE_THESE_I2C_VALUES_BRO   0x68 /* 'h' */
+#define    USRP2_CTRL_ID_COOL_IM_DONE_I2C_WRITE_DUDE  0x48 /* 'H' */
+#define    USRP2_CTRL_ID_GET_THIS_REGISTER_FOR_ME_BRO 0x72 /* 'r' */
+#define    USRP2_CTRL_ID_OMG_GOT_REGISTER_SO_BAD_DUDE 0x52 /* 'R' */
+#define    USRP2_CTRL_ID_HOLLER_AT_ME_BRO 0x6c /* 'l' */
+#define    USRP2_CTRL_ID_HOLLER_BACK_DUDE 0x4c /* 'L' */
+#define    USRP2_CTRL_ID_PEACE_OUT        0x7e /* '~' */
 
 #define     USRP2_REG_ACTION_FPGA_PEEK32 1
 #define     USRP2_REG_ACTION_FPGA_PEEK16 2
@@ -141,7 +148,7 @@ static const value_string uhd_reg_actions[] = {
     { USRP2_REG_ACTION_FPGA_PEEK32, "FPGA PEEK32" },
     { USRP2_REG_ACTION_FPGA_PEEK16, "FPGA PEEK16" },
     { USRP2_REG_ACTION_FPGA_POKE32, "FPGA POKE32" },
-    { USRP2_REG_ACTION_FPGA_POKE16, "FPGA POKE16" }, 
+    { USRP2_REG_ACTION_FPGA_POKE16, "FPGA POKE16" },
     { USRP2_REG_ACTION_FW_PEEK32,   "FW PEEK32" },
     { USRP2_REG_ACTION_FW_POKE32,   "FW POKE32" },
     { 0, NULL }
@@ -151,16 +158,13 @@ static const value_string uhd_reg_actions[] = {
 static void
 dissect_uhd(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 {
-	int len, ind, offset  = 0;
+	int ind, offset  = 0;
 	proto_item *ti;
 	proto_tree *uhd_tree = NULL;
-	guint32 proto_ver, id, seq, ip_addr;
-	guint8 i2c_addr, i2c_bytes;	
+	guint32 id, ip_addr;
+	guint8 i2c_bytes;
 
-	len = tvb_length(tvb);
-	proto_ver = tvb_get_ntohl(tvb, offset);
 	id = tvb_get_ntohl(tvb, offset + 4);
-	seq = tvb_get_ntohl(tvb, offset + 8);
 
 	col_clear(pinfo->cinfo, COL_INFO);
 	col_set_str(pinfo->cinfo, COL_PROTOCOL, "UHD");
@@ -199,7 +203,6 @@ dissect_uhd(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 		case USRP2_CTRL_ID_HERES_THE_I2C_DATA_DUDE:
 		case USRP2_CTRL_ID_WRITE_THESE_I2C_VALUES_BRO:
 		case USRP2_CTRL_ID_COOL_IM_DONE_I2C_WRITE_DUDE:
-			i2c_addr = tvb_get_guint8(tvb, offset + 12);
 			proto_tree_add_item(uhd_tree, hf_uhd_i2c_addr, tvb, offset+12, 1, ENC_BIG_ENDIAN);
 			i2c_bytes = tvb_get_guint8(tvb, offset + 13);
 			proto_tree_add_item(uhd_tree, hf_uhd_i2c_bytes, tvb, offset+13, 1, ENC_BIG_ENDIAN);

@@ -161,7 +161,7 @@ dissect_uhd(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 	int ind, offset  = 0;
 	proto_item *ti;
 	proto_tree *uhd_tree = NULL;
-	guint32 id, ip_addr;
+	guint32 id;
 	guint8 i2c_bytes;
 
 	id = tvb_get_ntohl(tvb, offset + 4);
@@ -187,8 +187,7 @@ dissect_uhd(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 		case UMTRX_CTRL_ID_RESPONSE:
 		case USRP2_CTRL_ID_WAZZUP_BRO:
 		case USRP2_CTRL_ID_WAZZUP_DUDE:
-			ip_addr = tvb_get_ipv4(tvb, offset + 12);
-			proto_tree_add_ipv4(uhd_tree, hf_uhd_ip_addr, tvb, offset+12, 4, ip_addr);
+    		proto_tree_add_item(uhd_tree, hf_uhd_ip_addr, tvb, offset+12, 4, ENC_BIG_ENDIAN);
 			break;
 		case USRP2_CTRL_ID_TRANSACT_ME_SOME_SPI_BRO:
 		case USRP2_CTRL_ID_OMG_TRANSACTED_SPI_DUDE:

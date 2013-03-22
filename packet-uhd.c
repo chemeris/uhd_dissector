@@ -101,7 +101,6 @@ typedef struct{
 
 static int proto_uhd = -1;
 
-
 static int hf_uhd_version = -1;
 static int hf_uhd_id = -1;
 static int hf_uhd_seq = -1;
@@ -158,13 +157,13 @@ static const value_string uhd_reg_actions[] = {
 static void
 dissect_uhd(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 {
-	int ind, offset  = 0;
+	int ind;
 	proto_item *ti;
 	proto_tree *uhd_tree = NULL;
 	guint32 id;
 	guint8 i2c_bytes;
 
-	id = tvb_get_ntohl(tvb, offset + 4);
+	id = tvb_get_ntohl(tvb, 4);
 
 	col_clear(pinfo->cinfo, COL_INFO);
 	col_set_str(pinfo->cinfo, COL_PROTOCOL, "UHD");
@@ -175,11 +174,11 @@ dissect_uhd(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 		ti = proto_tree_add_protocol_format(tree, proto_uhd, tvb, 0, 34, "UHD id = %c ", id);
 		uhd_tree = proto_item_add_subtree(ti, ett_uhd);
 		proto_tree_add_item(uhd_tree, hf_uhd_version,
-				    tvb, offset, 4, ENC_BIG_ENDIAN);
+				    tvb, 0, 4, ENC_BIG_ENDIAN);
 		proto_tree_add_item(uhd_tree, hf_uhd_id,
-				    tvb, offset+4, 4, ENC_BIG_ENDIAN);
+				    tvb, 4, 4, ENC_BIG_ENDIAN);
 		proto_tree_add_item(uhd_tree, hf_uhd_seq,
-				    tvb, offset+8, 4, ENC_BIG_ENDIAN);
+				    tvb, 8, 4, ENC_BIG_ENDIAN);
 	}
 
 	switch (id) {
@@ -187,40 +186,39 @@ dissect_uhd(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 		case UMTRX_CTRL_ID_RESPONSE:
 		case USRP2_CTRL_ID_WAZZUP_BRO:
 		case USRP2_CTRL_ID_WAZZUP_DUDE:
-    		proto_tree_add_item(uhd_tree, hf_uhd_ip_addr, tvb, offset+12, 4, ENC_BIG_ENDIAN);
+    		proto_tree_add_item(uhd_tree, hf_uhd_ip_addr, tvb, 12, 4, ENC_BIG_ENDIAN);
 			break;
 		case USRP2_CTRL_ID_TRANSACT_ME_SOME_SPI_BRO:
 		case USRP2_CTRL_ID_OMG_TRANSACTED_SPI_DUDE:
-			proto_tree_add_item(uhd_tree, hf_uhd_spi_dev, tvb, offset+12, 4, ENC_BIG_ENDIAN);
-			proto_tree_add_item(uhd_tree, hf_uhd_spi_data, tvb, offset+16, 4, ENC_BIG_ENDIAN);
-			proto_tree_add_item(uhd_tree, hf_uhd_spi_miso_edge, tvb, offset+20, 1, ENC_BIG_ENDIAN);
-			proto_tree_add_item(uhd_tree, hf_uhd_spi_mosi_edge, tvb, offset+21, 1, ENC_BIG_ENDIAN);
-			proto_tree_add_item(uhd_tree, hf_uhd_spi_num_bits, tvb, offset+22, 1, ENC_BIG_ENDIAN);
-			proto_tree_add_item(uhd_tree, hf_uhd_spi_readback, tvb, offset+23, 1, ENC_BIG_ENDIAN);
+			proto_tree_add_item(uhd_tree, hf_uhd_spi_dev, tvb, 12, 4, ENC_BIG_ENDIAN);
+			proto_tree_add_item(uhd_tree, hf_uhd_spi_data, tvb, 16, 4, ENC_BIG_ENDIAN);
+			proto_tree_add_item(uhd_tree, hf_uhd_spi_miso_edge, tvb, 20, 1, ENC_BIG_ENDIAN);
+			proto_tree_add_item(uhd_tree, hf_uhd_spi_mosi_edge, tvb, 21, 1, ENC_BIG_ENDIAN);
+			proto_tree_add_item(uhd_tree, hf_uhd_spi_num_bits, tvb, 22, 1, ENC_BIG_ENDIAN);
+			proto_tree_add_item(uhd_tree, hf_uhd_spi_readback, tvb, 23, 1, ENC_BIG_ENDIAN);
 			break;
 		case USRP2_CTRL_ID_DO_AN_I2C_READ_FOR_ME_BRO:
 		case USRP2_CTRL_ID_HERES_THE_I2C_DATA_DUDE:
 		case USRP2_CTRL_ID_WRITE_THESE_I2C_VALUES_BRO:
 		case USRP2_CTRL_ID_COOL_IM_DONE_I2C_WRITE_DUDE:
-			proto_tree_add_item(uhd_tree, hf_uhd_i2c_addr, tvb, offset+12, 1, ENC_BIG_ENDIAN);
-			i2c_bytes = tvb_get_guint8(tvb, offset + 13);
-			proto_tree_add_item(uhd_tree, hf_uhd_i2c_bytes, tvb, offset+13, 1, ENC_BIG_ENDIAN);
-			for (ind = 0; ind < i2c_bytes; ind++)
-			{
-				proto_tree_add_item(uhd_tree, hf_uhd_i2c_data, tvb, offset+14+ind, 1, ENC_BIG_ENDIAN);
+			proto_tree_add_item(uhd_tree, hf_uhd_i2c_addr, tvb, 12, 1, ENC_BIG_ENDIAN);
+			i2c_bytes = tvb_get_guint8(tvb, 13);
+			proto_tree_add_item(uhd_tree, hf_uhd_i2c_bytes, tvb, 13, 1, ENC_BIG_ENDIAN);
+			for (ind = 0; ind < i2c_bytes; ind++) {
+				proto_tree_add_item(uhd_tree, hf_uhd_i2c_data, tvb, 14 + ind, 1, ENC_BIG_ENDIAN);
 			}
 			break;
 		case USRP2_CTRL_ID_GET_THIS_REGISTER_FOR_ME_BRO:
 		case USRP2_CTRL_ID_OMG_GOT_REGISTER_SO_BAD_DUDE:
-			proto_tree_add_item(uhd_tree, hf_uhd_reg_addr, tvb, offset+12, 4, ENC_BIG_ENDIAN);
-			proto_tree_add_item(uhd_tree, hf_uhd_reg_data, tvb, offset+16, 4, ENC_BIG_ENDIAN);
-			proto_tree_add_item(uhd_tree, hf_uhd_reg_action, tvb, offset+20, 1, ENC_BIG_ENDIAN);
+			proto_tree_add_item(uhd_tree, hf_uhd_reg_addr, tvb, 12, 4, ENC_BIG_ENDIAN);
+			proto_tree_add_item(uhd_tree, hf_uhd_reg_data, tvb, 16, 4, ENC_BIG_ENDIAN);
+			proto_tree_add_item(uhd_tree, hf_uhd_reg_action, tvb, 20, 1, ENC_BIG_ENDIAN);
 			break;
 		case USRP2_CTRL_ID_HOLLER_AT_ME_BRO:
 		case USRP2_CTRL_ID_HOLLER_BACK_DUDE:
 		case USRP2_CTRL_ID_HUH_WHAT:
 		case USRP2_CTRL_ID_PEACE_OUT:
-			proto_tree_add_item(uhd_tree, hf_uhd_echo_len, tvb, offset+12, 4, ENC_BIG_ENDIAN);
+			proto_tree_add_item(uhd_tree, hf_uhd_echo_len, tvb, 12, 4, ENC_BIG_ENDIAN);
 			break;
 	}
 }

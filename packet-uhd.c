@@ -1,7 +1,7 @@
 /* packet-uhd.c
  * Routines for UHD captures
  *
- * (C) 2013 by Klyuchnikov Ivan <kluchnikovi@gmail.com>
+ * (C) 2013 by Klyuchnikov Ivan <kluchnikovi@gmail.com>, Dario Lombardo <lomato@gmail.com>
  *
  * $Id: packet-uhd.c 47974 2013-03-21 13:24:24Z eapache $
  *
@@ -37,6 +37,8 @@
 #include <glib.h>
 #include <epan/packet.h>
 #include <epan/prefs.h>
+
+static gint dissector_port_pref = 4991;
 
 /* ====== DO NOT MAKE UNAPPROVED MODIFICATIONS HERE ===== */
 
@@ -153,6 +155,8 @@ static const value_string uhd_reg_actions[] = {
     { 0, NULL }
 };
 
+void proto_reg_handoff_uhd(void);
+
 /* dissect a UHD header and hand payload off to respective dissector */
 static void
 dissect_uhd(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
@@ -267,18 +271,39 @@ proto_register_uhd(void)
 		&ett_uhd
 	};
 
+    module_t *uhd_module;
+
 	proto_uhd = proto_register_protocol("UHD", "UHD", "uhd");
 	proto_register_field_array(proto_uhd, hf, array_length(hf));
 	proto_register_subtree_array(ett, array_length(ett));
 
-
+    uhd_module = prefs_register_protocol(proto_uhd, proto_reg_handoff_uhd);
+    prefs_register_uint_preference(uhd_module,
+        "dissector_port",
+        "Dissector UDP port",
+        "The UDP port used by this dissector",
+        10, &dissector_port_pref);
 }
 
 void
 proto_reg_handoff_uhd(void)
 {
-	dissector_handle_t uhd_handle;
+    static gboolean uhd_prefs_initialized = FALSE;
+    static dissector_handle_t uhd_handle;
+    static gint dissector_port;
 
-	uhd_handle = create_dissector_handle(dissect_uhd, proto_uhd);
-	dissector_add_uint("udp.port", UHD_UDP_PORT, uhd_handle);
+    if (!uhd_prefs_initialized) {
+        uhd_handle = create_dissector_handle(dissect_uhd, proto_uhd);
+        uhd_prefs_initialized = TRUE;
+    } else {
+        dissector_delete_uint("udp.port", dissector_port, uhd_handle);
+    }
+
+    dissector_port = dissector_port_pref;
+
+    if (dissector_port == 0) {
+        dissector_add_handle("udp.port", uhd_handle);
+    } else {
+        dissector_add_uint("udp.port", dissector_port, uhd_handle);
+    }
 }

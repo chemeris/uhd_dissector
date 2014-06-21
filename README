@@ -11,7 +11,7 @@ Building and installing
 mkdir build
 cd build
 cmake ..
-... solve any issues with dependencies ...
+sudo apt-get install wireshark-dev
 make
 make install
 
